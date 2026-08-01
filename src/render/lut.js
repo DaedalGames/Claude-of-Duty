@@ -25,6 +25,40 @@ function linearToSrgb(c) {
 const LUM = [0.2126, 0.7152, 0.0722];
 
 export const GRADE_PRESETS = {
+  // Stylised grade: the hero-shooter end of the look axis rather than the
+  // photographic one `default` targets.
+  //
+  // This is a grade, not a shading model. It cannot give ink outlines or a
+  // banded diffuse ramp — those live in the lighting pass. What it does give,
+  // for zero extra runtime cost (the grade is a 33^3 LUT either way), is the
+  // colour half of the stylised look: saturated primaries, a harder contrast
+  // S, and highlights that stay chromatic instead of bleaching to film white.
+  //
+  // saturation goes well past the default 1.20 because AgX's inset/outset pair
+  // desaturates by construction; 1.20 only claws back to neutral, and a
+  // stylised frame has to read as *more* colourful than the scene radiance.
+  //
+  // highlightDesat drops to 0.02: film loses chroma in the shoulder, painted
+  // key art does not. Once saturation is up, this single value is what most
+  // separates "cartoon" from "movie".
+  //
+  // toe lifts to 0.020 (five code values) because stylised games rarely sit at
+  // true black in the corners; the lift keeps shadows reading as coloured
+  // shade rather than holes.
+  stylized: {
+    slope: [1.02, 1.0, 0.98],
+    offset: [0.0, 0.0, 0.004],
+    power: [0.98, 1.0, 1.02],
+    shadowTint: [-0.004, 0.002, 0.030],
+    highlightTint: [0.038, 0.016, -0.014],
+    saturation: 1.62,
+    contrast: 1.42,
+    pivot: 0.50,
+    highlightDesat: 0.02,
+    toe: 0.020,
+    shoulder: 0.72,
+    shoulderSoft: 1.05,
+  },
   // Neutral-but-cinematic default: slightly cool shadows, warm highlights,
   // a touch of contrast, mild highlight desaturation.
   default: {
