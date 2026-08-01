@@ -15,16 +15,33 @@
  * rewritten, and `realistic` is exactly the engine's original numbers.
  */
 
+/**
+ * The layers, cheapest first. Each one can be switched on alone, so the
+ * contribution of every layer is separable rather than bundled:
+ *
+ *   L1 grade      post-process colour only. No geometry or material change.
+ *   L2 material   the noise parameters every surface is baked from.
+ *   L3 light      ambient lift and shadow softening; painted art has fill light
+ *                 where a photographic frame has occlusion.
+ *   L4 fx         particle and impact palette.
+ *
+ * `?layers=grade,material` turns on exactly those. `?look=stylized` is the
+ * shorthand for all of them; `?look=realistic` is none.
+ */
+export const LAYERS = ['grade', 'material', 'light', 'fx'];
+
 export const LOOK_PRESETS = {
   // The engine as authored: photographic PBR, AgX, cinematic grade.
   realistic: {
     grade: 'default',
+    layers: [],
     mat: null,
   },
 
   // Hero-shooter: painted surfaces, saturated grade, less grime.
   stylized: {
     grade: 'stylized',
+    layers: LAYERS,
     mat: {
       // Fewer fBm octaves. High-frequency noise is what reads as "photographed
       // concrete"; a painted surface carries large shapes and almost no grain.
@@ -48,6 +65,36 @@ export const DEFAULT_LOOK = 'realistic';
 export function resolveLook(name) {
   return LOOK_PRESETS[name] ? name : DEFAULT_LOOK;
 }
+
+/**
+ * Which layers are active for this run.
+ * `?layers=` wins when present so a single layer can be isolated for comparison;
+ * otherwise the look's own set applies.
+ */
+export function activeLayers(search = (typeof location === 'undefined' ? '' : location.search)) {
+  const qs = new URLSearchParams(search);
+  const explicit = qs.get('layers');
+  if (explicit !== null) {
+    const want = explicit.split(',').map(s => s.trim()).filter(Boolean);
+    return new Set(want.filter(l => LAYERS.includes(l)));
+  }
+  return new Set(LOOK_PRESETS[resolveLook(qs.get('look'))].layers);
+}
+
+export function hasLayer(layer, search) {
+  return activeLayers(search).has(layer);
+}
+
+/** Ambient lift and shadow softening for the light layer. */
+export const LIGHT_STYLIZED = {
+  // Painted art fills its shadows. A photographic frame lets them go to
+  // occlusion; a hero-shooter frame keeps readable colour in there, which is
+  // why characters stay legible against any backdrop.
+  ambientMul: 1.55,
+  // Ambient occlusion is the single strongest "this is a photograph" cue in the
+  // shadowed corners. Halve rather than remove: at zero, geometry stops reading.
+  aoMul: 0.45,
+};
 
 /**
  * Apply a look's material transform to one merged parameter set.

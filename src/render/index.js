@@ -13,7 +13,7 @@ import { DepthOfField } from './dof.js';
 import { Bloom } from './bloom.js';
 import { AutoExposure } from './exposure.js';
 import { createGradeLut } from './lut.js';
-import { LOOK_PRESETS, resolveLook } from './look.js';
+import { LOOK_PRESETS, resolveLook, hasLayer, activeLayers, LIGHT_STYLIZED } from './look.js';
 import { createComposite, createFxaa, createDebug, createViewComposite } from './composite.js';
 import { buildFallbackEnvironment } from './env.js';
 import { RenderProbeScene } from './probe.js';
@@ -217,9 +217,11 @@ export class RenderSystem {
     // grade alone, which is what you want when isolating the colour layer.
     const qs = new URLSearchParams(location.search);
     this.lookName = resolveLook(qs.get('look'));
-    this.gradeName = qs.get('grade') || LOOK_PRESETS[this.lookName].grade;
+    this.gradeName = qs.get('grade')
+      || (hasLayer('grade') ? LOOK_PRESETS[this.lookName].grade : 'default');
+    this.lightLayer = hasLayer('light');
     this.lut = createGradeLut(this.gradeName);
-    console.info(`[render] look ${this.lookName} · grade ${this.gradeName}`);
+    console.info(`[render] look ${this.lookName} · grade ${this.gradeName} · layers ${[...activeLayers()].join('+') || 'none'}`);
     this.composite = createComposite(this.lut);
     this.viewComposite = createViewComposite();
     this.fxaa = q.taa ? null : createFxaa();
@@ -464,6 +466,17 @@ export class RenderSystem {
       shadowStrength: 1.0,
       sunSoftness: 0.024,
     };
+
+    // Light layer. Painted art fills its shadows; a photographic frame lets them
+    // fall to occlusion. Lifting the fills and pulling AO back is what stops a
+    // stylised frame reading as "the same scene with the saturation up".
+    if (this.lightLayer) {
+      this.settings.skyFill *= LIGHT_STYLIZED.ambientMul;
+      this.settings.groundFill *= LIGHT_STYLIZED.ambientMul;
+      this.settings.bounceFill *= LIGHT_STYLIZED.ambientMul;
+      this.settings.aoIntensity *= LIGHT_STYLIZED.aoMul;
+    }
+
     this._applySettings();
 
     this.probe = new RenderProbeScene(this.rng.fork());
