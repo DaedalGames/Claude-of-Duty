@@ -211,7 +211,12 @@ export class RenderSystem {
     // afternoon. Daylight shots meter between -1 and -2.1, so this only ever
     // binds after dark.
     this.exposure.setLimits(-4.3, 20);
-    this.lut = createGradeLut('default');
+    // Look selection. `?grade=stylized` swaps in the hero-shooter colour grade;
+    // an unknown name falls back to default. Other subsystems already read their
+    // switches off the query string the same way.
+    this.gradeName = new URLSearchParams(location.search).get('grade') || 'default';
+    this.lut = createGradeLut(this.gradeName);
+    console.info(`[render] grade ${this.gradeName}`);
     this.composite = createComposite(this.lut);
     this.viewComposite = createViewComposite();
     this.fxaa = q.taa ? null : createFxaa();
