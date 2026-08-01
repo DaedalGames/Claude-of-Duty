@@ -99,7 +99,7 @@ page.on('pageerror', (e) => logs.push(`[pageerror] ${e.message}\n${e.stack ?? ''
 
 let failed = null;
 try {
-  await page.goto(`http://127.0.0.1:${PORT}/?capture=1&grade=${encodeURIComponent(args.grade ?? "default")}&prewarm=${args.prewarm ?? "1"}&q=${encodeURIComponent(args.q ?? "ultra")}&shot=${encodeURIComponent(SHOT)}`, {
+  await page.goto(`http://127.0.0.1:${PORT}/?capture=1&look=${encodeURIComponent(args.look ?? "realistic")}${args.grade ? `&grade=${encodeURIComponent(args.grade)}` : ""}&prewarm=${args.prewarm ?? "1"}&q=${encodeURIComponent(args.q ?? "ultra")}&shot=${encodeURIComponent(SHOT)}`, {
     waitUntil: 'domcontentloaded',
     timeout: TIMEOUT,
   });

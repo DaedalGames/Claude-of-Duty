@@ -3,6 +3,11 @@ import { TextureForge } from './generator.js';
 import { LIBRARY, resolveName } from './library.js';
 import { extendMaterial, DEFAULT_PARAMS } from './shader.js';
 import { bakeMasks, setMask } from './masks.js';
+import { applyLookToMat, resolveLook } from '../render/look.js';
+
+// Art-direction axis, read once. Orthogonal to the quality preset: `?look=`
+// changes what the frame looks like, `?q=` changes what it costs.
+const LOOK = resolveLook(new URLSearchParams(location.search).get('look'));
 
 /**
  * Procedural PBR texture generation and the shared material library.
@@ -185,7 +190,9 @@ export class MaterialSystem {
     if (cached) return cached;
 
     const set = this.getTextureSet(key, opts);
-    const p = { ...DEFAULT_PARAMS, ...def.mat, ...opts };
+    // Every one of the 62 surfaces passes through here, so the look's material
+    // transform rides on top of all of them without any being rewritten.
+    const p = applyLookToMat({ ...DEFAULT_PARAMS, ...def.mat, ...opts }, LOOK);
     delete p.three;
     delete p.bake;
     p.groundY = opts.groundY ?? this._groundY;

@@ -13,6 +13,7 @@ import { DepthOfField } from './dof.js';
 import { Bloom } from './bloom.js';
 import { AutoExposure } from './exposure.js';
 import { createGradeLut } from './lut.js';
+import { LOOK_PRESETS, resolveLook } from './look.js';
 import { createComposite, createFxaa, createDebug, createViewComposite } from './composite.js';
 import { buildFallbackEnvironment } from './env.js';
 import { RenderProbeScene } from './probe.js';
@@ -211,12 +212,14 @@ export class RenderSystem {
     // afternoon. Daylight shots meter between -1 and -2.1, so this only ever
     // binds after dark.
     this.exposure.setLimits(-4.3, 20);
-    // Look selection. `?grade=stylized` swaps in the hero-shooter colour grade;
-    // an unknown name falls back to default. Other subsystems already read their
-    // switches off the query string the same way.
-    this.gradeName = new URLSearchParams(location.search).get('grade') || 'default';
+    // `?look=` picks the art direction and carries its own grade, so one switch
+    // moves the surfaces and the colour together. `?grade=` still overrides the
+    // grade alone, which is what you want when isolating the colour layer.
+    const qs = new URLSearchParams(location.search);
+    this.lookName = resolveLook(qs.get('look'));
+    this.gradeName = qs.get('grade') || LOOK_PRESETS[this.lookName].grade;
     this.lut = createGradeLut(this.gradeName);
-    console.info(`[render] grade ${this.gradeName}`);
+    console.info(`[render] look ${this.lookName} · grade ${this.gradeName}`);
     this.composite = createComposite(this.lut);
     this.viewComposite = createViewComposite();
     this.fxaa = q.taa ? null : createFxaa();
