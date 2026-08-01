@@ -102,16 +102,56 @@ export class Engine {
     this._running = true;
     this._last = performance.now();
     this._loop = this._loop.bind(this);
+    this._installIdleGuard();
     requestAnimationFrame(this._loop);
   }
 
   stop() {
     this._running = false;
+    this._removeIdleGuard();
+  }
+
+  /**
+   * Stop drawing when nobody is looking.
+   *
+   * Browsers throttle rAF in a *hidden* tab, but not in a visible window that
+   * merely lost focus. An unfocused game window therefore keeps running a full
+   * deferred pipeline behind whatever the user actually switched to, which on a
+   * laptop means the dGPU stays pinned, the fans stay up, and every other
+   * application competes for the same thermal budget.
+   *
+   * Idle = document hidden, or the window does not have focus. In that state
+   * skip the frame rather than render one nobody sees. The loop keeps ticking so
+   * play resumes the instant focus returns.
+   */
+  _idle() {
+    if (typeof document === 'undefined') return false;
+    if (document.hidden) return true;
+    return typeof document.hasFocus === 'function' && !document.hasFocus();
+  }
+
+  _installIdleGuard() {
+    if (this._idleGuard || typeof document === 'undefined') return;
+    // Waking has to reset the clock, or the first live frame integrates the
+    // whole idle gap as one enormous dt and the world jumps.
+    this._idleGuard = () => { this._last = performance.now(); };
+    document.addEventListener('visibilitychange', this._idleGuard);
+    addEventListener('focus', this._idleGuard);
+  }
+
+  _removeIdleGuard() {
+    if (!this._idleGuard || typeof document === 'undefined') return;
+    document.removeEventListener('visibilitychange', this._idleGuard);
+    removeEventListener('focus', this._idleGuard);
+    this._idleGuard = null;
   }
 
   _loop(now) {
     if (!this._running) return;
     requestAnimationFrame(this._loop);
+    // The capture harness pumps frames by hand through step(), so it never goes
+    // through here and is unaffected by the idle guard.
+    if (this._idle()) { this._last = now; return; }
     this.step(now);
   }
 

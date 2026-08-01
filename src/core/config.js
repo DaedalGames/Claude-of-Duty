@@ -82,7 +82,12 @@ export const QUALITY_PRESETS = {
 };
 
 export const DEFAULTS = {
-  quality: 'ultra',
+  // Interactive default. `ultra` is what the look was authored and benchmarked
+  // at, but it is a showcase setting: the README's own numbers are 28-30 fps on
+  // the author's machine, so on a laptop it pins the dGPU for anyone who just
+  // opened the page to look around. Capture and baseline runs pass `--q=ultra`
+  // explicitly, so the pixel gate is unaffected by this.
+  quality: 'high',
   fov: 80, // horizontal-ish vertical FOV, CoD default feel
   adsFovScale: 0.72,
   sensitivity: 0.0022,
