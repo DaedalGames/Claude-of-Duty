@@ -60,10 +60,22 @@ async function ensureServer() {
 
 const server = await ensureServer();
 
+// ANGLE's backend is platform-specific. `metal` exists only on macOS, and passing
+// it elsewhere fails silently: ANGLE falls back to SwiftShader and the whole
+// capture runs on the CPU. That looks exactly like "this machine has no GPU"
+// when the machine has a perfectly good one, and a boot that takes seconds on
+// the intended backend never finishes.
+const ANGLE = process.platform === 'darwin' ? 'metal'
+  : process.platform === 'win32' ? 'd3d11'
+    : 'gl';
+
 const browser = await chromium.launch({
   headless: true,
   args: [
-    '--use-angle=metal',
+    `--use-angle=${ANGLE}`,
+    // On a dual-GPU laptop Chromium picks the low-power integrated adapter by
+    // default, which is not the card you meant to benchmark or capture on.
+    '--force-high-performance-gpu',
     '--enable-unsafe-webgpu',
     '--ignore-gpu-blocklist',
     '--enable-gpu-rasterization',
@@ -91,6 +103,20 @@ try {
     waitUntil: 'domcontentloaded',
     timeout: TIMEOUT,
   });
+
+  // Confirm this port is actually serving the game before waiting minutes on it.
+  // ensureServer() only checks that *something* is listening, so any other dev
+  // server on the port gets captured instead, and the only symptom is a
+  // __READY__ timeout that looks like a GPU or engine problem. Fail fast and say
+  // which port is wrong.
+  const isGame = await page.evaluate(() => !!document.getElementById('game'));
+  if (!isGame) {
+    const title = await page.title();
+    throw new Error(
+      `port ${PORT} is serving something else (title: "${title}") — no #game canvas. `
+      + 'Pass --port=<the vite port for this repo>.',
+    );
+  }
 
   // Engine sets window.__READY__ = true once assets are loaded and first frame drawn.
   await page.waitForFunction('window.__READY__ === true', null, { timeout: TIMEOUT });

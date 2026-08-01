@@ -5,8 +5,11 @@ import { chromium } from 'playwright';
 const PORT = process.argv[2] ?? '4174';
 const WAIT = Number(process.argv[3] ?? 120000);
 
+const ANGLE = process.platform === 'darwin' ? 'metal'
+  : process.platform === 'win32' ? 'd3d11'
+    : 'gl';
 const browser = await chromium.launch({
-  args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'],
+  args: [`--use-angle=${ANGLE}`, '--force-high-performance-gpu', '--ignore-gpu-blocklist'],
 });
 const page = await browser.newPage({ viewport: { width: 800, height: 450 } });
 
@@ -14,7 +17,7 @@ page.on('console', m => console.log(`[${m.type()}] ${m.text().slice(0, 300)}`));
 page.on('pageerror', e => console.log(`[pageerror] ${String(e).slice(0, 500)}`));
 page.on('requestfailed', r => console.log(`[reqfail] ${r.url().slice(0, 120)}`));
 
-await page.goto(`http://127.0.0.1:${PORT}/?capture=1&q=low`, { waitUntil: 'domcontentloaded' });
+await page.goto(`http://127.0.0.1:${PORT}/?capture=1&q=low&shot=hero`, { waitUntil: 'domcontentloaded' });
 
 const t0 = Date.now();
 while (Date.now() - t0 < WAIT) {
