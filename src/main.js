@@ -24,9 +24,13 @@ const capture = params.get('capture') === '1';
 // free-run. See the long comment in src/dev/shots.js.
 const lockstep = capture && params.get('lockstep') === '1';
 
+// A generated game is a seed plus a look plus a time of day. Those three are the
+// derivation surface: the engine is fixed and the prompt only picks values.
+const seedParam = params.get('seed');
 const config = createConfig({
   quality: params.get('q') ?? 'ultra',
   deterministic: capture,
+  seed: seedParam === null ? undefined : (Number(seedParam) >>> 0),
 });
 
 const canvas = document.getElementById('game');
@@ -79,6 +83,15 @@ const shotApi = installShotApi(engine, { capture, lockstep });
 const warmup = params.get('prewarm') === '0' ? { ok: false, reason: 'disabled by ?prewarm=0' } : await prewarm(engine);
 console.info('[boot] prewarm', warmup);
 window.__PREWARM__ = warmup;
+
+// Time of day is the cheapest lever with the largest effect on how a level
+// reads: the same street is a different game at 06:00 and at 19:30. The sky
+// subsystem owns it, so set it after init and let it rebake once.
+const hour = params.get('hour');
+if (hour !== null) {
+  const h = Number(hour);
+  if (Number.isFinite(h)) engine.ctx.peek('sky')?.setTimeOfDay?.(((h % 24) + 24) % 24);
+}
 
 engine.start();
 

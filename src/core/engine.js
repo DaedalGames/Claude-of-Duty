@@ -23,7 +23,13 @@ export class Engine {
     this.registry = new Registry();
     this.events = new EventBus();
     this.input = new Input(canvas, config);
-    this.rng = new Rng(config.deterministic ? 0x5eed1234 : (Math.random() * 2 ** 32) >>> 0);
+    // A generated game needs a world it can reproduce, so an explicit seed wins
+    // over both the deterministic constant and the random one.
+    this.rng = new Rng(
+      Number.isFinite(config.seed) ? (config.seed >>> 0)
+        : config.deterministic ? 0x5eed1234
+          : (Math.random() * 2 ** 32) >>> 0,
+    );
 
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(config.fov, 1, 0.05, 1200);
