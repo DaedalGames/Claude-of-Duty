@@ -85,6 +85,34 @@ export function hasLayer(layer, search) {
   return activeLayers(search).has(layer);
 }
 
+/**
+ * Particle transform for the fx layer.
+ *
+ * A realistic impact is small, short and desaturated: it reads as debris caught
+ * by a camera. A hero-shooter impact is a legible shape held long enough to
+ * register at a glance, because it is feedback first and simulation second.
+ * Every particle in the game passes through ParticleLayer.emit, so this scales
+ * the spawn rather than editing each effect.
+ */
+export const FX_STYLIZED = {
+  size: 1.45,        // bigger sprites read as drawn shapes, not motes
+  life: 1.30,        // held longer so the hit registers
+  sat: 1.35,         // pushed toward the primary, away from smoke grey
+  stretch: 0.70,     // less velocity smear: a cartoon spark keeps its outline
+};
+
+/** Push one spawn colour toward its dominant channel. */
+export function saturateSpawn(s, k = FX_STYLIZED.sat) {
+  for (const [r, g, b] of [['r0', 'g0', 'b0'], ['r1', 'g1', 'b1']]) {
+    const mx = Math.max(s[r], s[g], s[b]);
+    if (mx <= 0) continue;
+    const lum = 0.2126 * s[r] + 0.7152 * s[g] + 0.0722 * s[b];
+    s[r] = Math.min(4, lum + (s[r] - lum) * k);
+    s[g] = Math.min(4, lum + (s[g] - lum) * k);
+    s[b] = Math.min(4, lum + (s[b] - lum) * k);
+  }
+}
+
 /** Ambient lift and shadow softening for the light layer. */
 export const LIGHT_STYLIZED = {
   // Painted art fills its shadows. A photographic frame lets them go to

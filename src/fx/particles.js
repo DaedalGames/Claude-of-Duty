@@ -1,4 +1,8 @@
 import * as THREE from 'three';
+import { hasLayer, FX_STYLIZED, saturateSpawn } from '../render/look.js';
+
+// fx 층. 게임의 모든 파티클이 emit()을 지나므로 스폰 시점에 한 번만 변환한다.
+const FX_LAYER = hasLayer('fx');
 
 /**
  * GPU particle system.
@@ -355,6 +359,15 @@ export class ParticleLayer {
    * resetSpawn() so nothing leaks between call sites.
    */
   emit(s, now) {
+    // 사실적 임팩트는 작고 짧고 채도가 낮다(카메라가 잡은 파편). 히어로 슈터의 임팩트는
+    // 한눈에 읽히는 형태를 충분히 오래 유지한다 — 시뮬레이션이 아니라 피드백이기 때문이다.
+    if (FX_LAYER) {
+      s.size0 *= FX_STYLIZED.size;
+      s.size1 *= FX_STYLIZED.size;
+      s.life *= FX_STYLIZED.life;
+      s.stretch *= FX_STYLIZED.stretch;
+      saturateSpawn(s);
+    }
     const i = this.cursor;
     this.cursor = i + 1;
     if (this.cursor >= this.capacity) {
