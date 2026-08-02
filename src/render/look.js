@@ -24,11 +24,13 @@
  *   L3 light      ambient lift and shadow softening; painted art has fill light
  *                 where a photographic frame has occlusion.
  *   L4 fx         particle and impact palette.
+ *   L5 outline    ink line from gbuffer edge detection. The only layer that
+ *                 changes shading rather than colour.
  *
  * `?layers=grade,material` turns on exactly those. `?look=stylized` is the
  * shorthand for all of them; `?look=realistic` is none.
  */
-export const LAYERS = ['grade', 'material', 'light', 'fx'];
+export const LAYERS = ['grade', 'material', 'light', 'fx', 'outline'];
 
 export const LOOK_PRESETS = {
   // The engine as authored: photographic PBR, AgX, cinematic grade.

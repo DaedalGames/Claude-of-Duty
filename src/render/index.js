@@ -14,6 +14,7 @@ import { Bloom } from './bloom.js';
 import { AutoExposure } from './exposure.js';
 import { createGradeLut } from './lut.js';
 import { LOOK_PRESETS, resolveLook, hasLayer, activeLayers, LIGHT_STYLIZED } from './look.js';
+import { createOutlinePass } from './outline.js';
 import { createComposite, createFxaa, createDebug, createViewComposite } from './composite.js';
 import { buildFallbackEnvironment } from './env.js';
 import { RenderProbeScene } from './probe.js';
@@ -476,6 +477,10 @@ export class RenderSystem {
       this.settings.bounceFill *= LIGHT_STYLIZED.ambientMul;
       this.settings.aoIntensity *= LIGHT_STYLIZED.aoMul;
     }
+
+    // L5 아웃라인: 색이 아니라 셰이딩을 바꾸는 유일한 층. gbuffer 엣지 검출이라
+    // 지오메트리를 다시 그리지 않는다.
+    if (hasLayer('outline')) this.registerPass(createOutlinePass());
 
     this._applySettings();
 
